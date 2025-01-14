@@ -1,13 +1,13 @@
 import cors from 'cors';
-import express, { Application, type Router } from 'express';
+import express, { type Application, type Router } from 'express';
 
 import { BASE_PATH } from 'src/routes/paths';
 
-export class ContextiumApplication {
+export class ApiServer {
   private app: Application;
-  private SERVER_PORT = process.env.SERVER_PORT || 3000;
 
-  constructor(app: Application, mainRouter: Router) {
+  constructor(mainRouter: Router) {
+    const app = express();
     this.initializeMiddlewares(app);
     this.initializeRouter(app, mainRouter);
 
@@ -23,13 +23,7 @@ export class ContextiumApplication {
     app.use(BASE_PATH, mainRouter);
   }
 
-  public getExpressApplication() {
+  public getApiServerInstance() {
     return this.app;
-  }
-
-  public listen() {
-    return this.app.listen(this.SERVER_PORT, () =>
-      console.log(`Server running on port ${this.SERVER_PORT}`)
-    );
   }
 }

@@ -1,6 +1,8 @@
-import { Request, Response } from 'express';
+import { type Response, type Request } from 'express';
 
-import { configPaths } from '../paths';
+import { HuggingFaceIntegration } from 'src/clients/integrations/huggingface.integration';
+
+import { CONFIG_PATHS } from '../paths';
 import { BaseRouter } from './baseRouter';
 
 export class ConfigRouter extends BaseRouter {
@@ -9,7 +11,9 @@ export class ConfigRouter extends BaseRouter {
   }
 
   protected registerRoutes() {
-    this.router.get(configPaths.ping, (req: Request, res: Response) => {
+    this.router.get(CONFIG_PATHS.ping, (_req: Request, res: Response) => {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      new HuggingFaceIntegration().test();
       res.status(200).json({ ping: true });
     });
   }

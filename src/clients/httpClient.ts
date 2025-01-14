@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import { assertIsError } from 'src/utils/error';
 
 export const ContentType = {
@@ -12,29 +13,37 @@ export class HttpClient {
   private config: RequestInit | undefined;
 
   constructor(init: Partial<RequestInit & { url: string }> = {}) {
-    const { url, ...initConfig } = init;
+    const { url, headers, ...initConfig } = init;
     this.url = url;
-    this.config = initConfig;
+    this.config = { ...initConfig, headers: new Headers(headers) };
   }
 
-  public async fetchCall<T>(url?: string, config?: RequestInit): Promise<T> {
-    const apiUrl = url || this.url;
-    const apiConfig = config || this.config;
+  public async fetchCall<T>(
+    url?: string,
+    config?: RequestInit
+  ): Promise<T | null> {
+    const apiUrl = url ?? this.url;
+    const apiConfig = config ?? this.config;
 
     if (!apiUrl) throw new Error('No Url for Fetch Call');
 
     const res = await fetch(apiUrl, apiConfig);
 
-    return await this.processResponse(res);
+    return await this.processResponse<T | null>(res);
   }
 
-  private async processResponse(res: Response) {
+  private async processResponse<T>(res: Response): Promise<T | null> {
     const contentType = res.headers.get('Content-Type');
-    if (!contentType) return;
+    if (!contentType) return null;
 
     try {
-      if (contentType === ContentType.applicationJson) return await res.json();
-      if (contentType === ContentType.textPlain) return await res.text();
+      if (contentType === ContentType.applicationJson)
+        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+        return await (res.json() as Promise<T>);
+
+      if (contentType === ContentType.textPlain)
+        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+        return await (res.text() as Promise<T>);
     } catch (error: unknown) {
       const msg = `Error Processing Response for Content Type: ${contentType}.`;
 
@@ -47,23 +56,19 @@ export class HttpClient {
   }
 
   public addContentType(contentType: ContentType) {
-    const updatedHeaders: HeadersInit = {
-      ...this.config?.headers,
-      'Content-Type': contentType,
-    };
+    const headers = new Headers(this.config?.headers);
+    headers.append('Content-Type', contentType);
 
-    this.config = { ...this.config, headers: updatedHeaders };
+    this.config = { ...this.config, headers };
 
     return this;
   }
 
   public addBearerAuth(authToken: string) {
-    const updatedHeaders: HeadersInit = {
-      ...this.config?.headers,
-      Authorization: `Bearer ${authToken}`,
-    };
+    const headers = new Headers(this.config?.headers);
+    headers.append('Authorization', `Bearer ${authToken}`);
 
-    this.config = { ...this.config, headers: updatedHeaders };
+    this.config = { ...this.config, headers };
 
     return this;
   }
