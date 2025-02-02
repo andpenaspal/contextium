@@ -4,11 +4,18 @@ import { assertIsError } from 'src/utils/error';
 export const ContentType = {
   applicationJson: 'application/json',
   textPlain: 'text/plain',
+  textEventStream: 'text/event-stream',
 } as const;
 
-type ContentType = (typeof ContentType)[keyof typeof ContentType];
+export type ContentType = (typeof ContentType)[keyof typeof ContentType];
 
-export class HttpClient {
+export type RequestResponse = Promise<unknown> | ReadableStream<unknown>;
+export type ConditionalRequestResponse<
+  P extends RequestResponse,
+  T extends object | string,
+> = Promise<P extends Promise<unknown> ? T : ReadableStream<T> | null>;
+
+export abstract class HttpBaseClient<P extends RequestResponse> {
   private url: string | undefined;
   private config: RequestInit | undefined;
 
@@ -18,10 +25,10 @@ export class HttpClient {
     this.config = { ...initConfig, headers: new Headers(headers) };
   }
 
-  public async fetchCall<T>(
+  public async request<T extends object | string>(
     url?: string,
     config?: RequestInit
-  ): Promise<T | null> {
+  ): ConditionalRequestResponse<P, T> {
     const apiUrl = url ?? this.url;
     const apiConfig = config ?? this.config;
 
@@ -29,31 +36,12 @@ export class HttpClient {
 
     const res = await fetch(apiUrl, apiConfig);
 
-    return await this.processResponse<T | null>(res);
+    return await this.processResponse<T>(res);
   }
 
-  private async processResponse<T>(res: Response): Promise<T | null> {
-    const contentType = res.headers.get('Content-Type');
-    if (!contentType) return null;
-
-    try {
-      if (contentType === ContentType.applicationJson)
-        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-        return await (res.json() as Promise<T>);
-
-      if (contentType === ContentType.textPlain)
-        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-        return await (res.text() as Promise<T>);
-    } catch (error: unknown) {
-      const msg = `Error Processing Response for Content Type: ${contentType}.`;
-
-      assertIsError(error, msg);
-
-      throw new Error(`${msg} Error: ${error.message}`);
-    }
-
-    throw new Error(`Content Type not supported: ${contentType}`);
-  }
+  protected abstract processResponse<T>(
+    res: Response
+  ): Promise<P extends Promise<unknown> ? T : ReadableStream<T> | null>;
 
   public addContentType(contentType: ContentType) {
     const headers = new Headers(this.config?.headers);

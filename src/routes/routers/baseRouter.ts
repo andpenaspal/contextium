@@ -5,12 +5,12 @@ export abstract class BaseRouter {
 
   constructor() {
     this.router = Router();
-    this.registerRoutes(); // Ensure each router calls this method
   }
 
   protected abstract registerRoutes(): void;
 
   public getRouter(): Router {
+    this.registerRoutes();
     return this.router;
   }
 }

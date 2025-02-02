@@ -4,6 +4,8 @@ import WebSocket, { WebSocketServer } from 'ws';
 
 import logger from 'src/utils/logger';
 
+import { ChatController } from 'src/controllers/chat.controller';
+
 export class ChatWebSocketServer {
   private webSocketServer: WebSocketServer;
 
@@ -30,28 +32,43 @@ export class ChatWebSocketServer {
       this.configureWebSocket(webSocket);
 
       webSocket.send('Welcome to the WebSocket server!');
+      webSocket.send(' ');
     });
   }
 
   private configureWebSocket(webSocket: WebSocket) {
     logger.info('Configuring Websocket Behavior');
 
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     webSocket.on('message', this.onMessageConfig(webSocket));
     webSocket.on('close', this.onCloseConfig());
   }
 
   private onMessageConfig(webSocket: WebSocket) {
-    const onMessage = (message: WebSocket.RawData) => {
+    const onMessage = async (message: WebSocket.RawData) => {
       const decodedMessage =
         message instanceof Buffer
           ? message.toString().trim()
           : JSON.stringify(message);
 
-      logger.info('Message Received in WebSocket', {
-        message: decodedMessage,
-      });
+      logger.info(`Message Received in WebSocket: ${decodedMessage}`);
 
-      webSocket.send(`Echo: ${decodedMessage}`);
+      const cc = new ChatController();
+
+      try {
+        await cc.processIncomingChatMessage(
+          {
+            content: decodedMessage,
+            threadId: '',
+            userId: '',
+          },
+          webSocket
+        );
+
+        logger.info('Finished processIncomingChatMessage');
+      } catch (e) {
+        logger.error('Error during processIncomingChatMessage:', e);
+      }
     };
 
     return onMessage;

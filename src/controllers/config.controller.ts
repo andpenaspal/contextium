@@ -1,3 +1,5 @@
 export class ConfigController {
-  constructor() {}
+  ping() {
+    return true;
+  }
 }

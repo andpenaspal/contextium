@@ -4,14 +4,9 @@ import express, { type Application, type Router } from 'express';
 import { BASE_PATH } from 'src/routes/paths';
 
 export class ApiServer {
-  private app: Application;
-
-  constructor(mainRouter: Router) {
-    const app = express();
-    this.initializeMiddlewares(app);
-    this.initializeRouter(app, mainRouter);
-
-    this.app = app;
+  constructor(application: Application, mainRouter: Router) {
+    this.initializeMiddlewares(application);
+    this.initializeRouter(application, mainRouter);
   }
 
   private initializeMiddlewares(app: Application) {
@@ -21,9 +16,5 @@ export class ApiServer {
 
   private initializeRouter(app: Application, mainRouter: Router) {
     app.use(BASE_PATH, mainRouter);
-  }
-
-  public getApiServerInstance() {
-    return this.app;
   }
 }
