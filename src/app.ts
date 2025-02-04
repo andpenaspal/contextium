@@ -3,6 +3,7 @@ import express from 'express';
 import type { RequestListener } from 'http';
 
 import { ConfigModule } from 'src/modules/config.module';
+import { DocumentsModule } from 'src/modules/documents.module';
 import logger from 'src/utils/logger';
 
 import { MainRouter, type RouterConfig } from 'src/routes/main.router';
@@ -16,6 +17,7 @@ dotenv.config();
 
 const routers: RouterConfig[] = [
   { path: BASE_PATHS.config, router: new ConfigModule().getRouter() },
+  { path: BASE_PATHS.documents, router: new DocumentsModule().getRouter() },
 ];
 
 const apiApp = express();

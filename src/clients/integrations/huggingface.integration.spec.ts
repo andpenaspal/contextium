@@ -109,7 +109,7 @@ describe('Huggingface Tests', () => {
 
     requestSpy.mockResolvedValue(mockResponse);
 
-    const huggingFace = new HuggingFaceIntegration('some-model', 'fake-token');
+    const huggingFace = new HuggingFaceIntegration();
 
     const res = await huggingFace.queryStream('');
 
@@ -119,7 +119,7 @@ describe('Huggingface Tests', () => {
   // Bug: Cannot be tested
   // https://github.com/capricorn86/happy-dom/issues/1180
   test.todo('Process Stream', async () => {
-    const huggingFace = new HuggingFaceIntegration('some-model', 'fake-token');
+    const huggingFace = new HuggingFaceIntegration();
 
     const content = await huggingFace.processStream(
       dataExampleStream,
@@ -132,7 +132,7 @@ describe('Huggingface Tests', () => {
   // Bug: Cannot be tested
   // https://github.com/capricorn86/happy-dom/issues/1180
   test.todo('Process Stream with incomplete data', async () => {
-    const huggingFace = new HuggingFaceIntegration('some-model', 'fake-token');
+    const huggingFace = new HuggingFaceIntegration();
 
     const content = await huggingFace.processStream(
       dataExampleStreamIncompleteChunk,
@@ -152,7 +152,7 @@ describe('Huggingface Tests', () => {
 
     requestSpy.mockResolvedValue(mockResponse);
 
-    const huggingFace = new HuggingFaceIntegration('some-model', 'fake-token');
+    const huggingFace = new HuggingFaceIntegration();
 
     const res = await huggingFace.queryStream('');
 

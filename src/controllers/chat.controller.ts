@@ -22,11 +22,7 @@ export class ChatController {
   ) {
     // Save in DB;
     logger.info(`Processing Message: ${chatMessage.content}`);
-    const api = new HuggingFaceIntegration(
-      // Embeddings: all-mpnet-base-v2
-      'google/gemma-2-2b-it/v1/chat/completions',
-      process.env.HUGGING_FACE_API_TOKEN
-    );
+    const api = new HuggingFaceIntegration();
 
     const streamer = await api.queryStream(chatMessage.content);
 

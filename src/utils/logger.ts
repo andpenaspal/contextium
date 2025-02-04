@@ -23,4 +23,21 @@ const logger = winston.createLogger({
   transports: [new winston.transports.Console()],
 });
 
+export const printLogger = winston.createLogger({
+  level: 'info', // This sets the minimum log level (debug is the lowest)
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    // eslint-disable-next-line no-shadow
+    winston.format.printf(({ timestamp, level, message }) => {
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+      return `${timestamp} [${level.toUpperCase()}]: ${message}`;
+    })
+  ),
+  transports: [
+    new winston.transports.File({
+      filename: 'debug.log',
+    }),
+  ],
+});
+
 export default logger;

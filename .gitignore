@@ -5,3 +5,7 @@
 .env
 
 /coverage
+
+# Data
+/data/books/* 
+/data/extracted/*

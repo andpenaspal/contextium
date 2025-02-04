@@ -1,5 +1,6 @@
-import { ContentType } from 'src/clients/http/httpClient';
+import { ContentType, HttpClient } from 'src/clients/http/httpClient';
 import { HttpStreamClient } from 'src/clients/http/httpStreamClient';
+import { assertIsError } from 'src/utils/error';
 import logger from 'src/utils/logger';
 
 export type StreamResponse = {
@@ -18,21 +19,15 @@ export type StreamResponse = {
 };
 
 export class HuggingFaceIntegration {
-  private static baseUrl = 'https://api-inference.huggingface.co/models/';
-  private model: string;
-  private apiToken: string;
-
-  constructor(model: string, apiToken: string) {
-    this.model = model;
-    this.apiToken = apiToken;
-  }
+  private static queryModel = 'google/gemma-2-2b-it';
+  private static queryUrl = `https://api-inference.huggingface.co/models/${HuggingFaceIntegration.queryModel}/v1/chat/completions`;
+  private static embeddingsUrl =
+    'https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/sentence-transformers/all-mpnet-base-v2';
+  private static apiToken = process.env.HUGGING_FACE_API_TOKEN;
 
   public async queryStream(query: string): Promise<ReadableStream<Uint8Array>> {
-    const url = `${HuggingFaceIntegration.baseUrl}${this.model}`;
-    logger.info(`Calling ${url}`);
-
     const data = {
-      model: 'google/gemma-2-2b-it',
+      model: HuggingFaceIntegration.queryModel,
       messages: [
         {
           role: 'user',
@@ -43,9 +38,11 @@ export class HuggingFaceIntegration {
       stream: true,
     };
 
-    const stream = await new HttpStreamClient({ url })
+    const stream = await new HttpStreamClient({
+      url: HuggingFaceIntegration.queryUrl,
+    })
       .addContentType(ContentType.applicationJson)
-      .addBearerAuth(this.apiToken)
+      .addBearerAuth(HuggingFaceIntegration.apiToken)
       .addBody(data)
       .addMethod('POST')
       .request<Uint8Array>();
@@ -59,7 +56,7 @@ export class HuggingFaceIntegration {
     stream: ReadableStream<Uint8Array>,
     onChunk?: (content: string) => void
   ): Promise<string> {
-    // TODO: Improve this implementation. Split and delete "let"
+    // TODO: Improve this monstrosity.
     let fullContent = '';
     let partialResponse = '';
     let isDone = false;
@@ -134,5 +131,33 @@ export class HuggingFaceIntegration {
     }
 
     return fullContent;
+  }
+
+  public async generateEmbeddings(content: string[]): Promise<number[][]> {
+    logger.info(`Generating Embeddings`);
+
+    const data = { inputs: content };
+
+    try {
+      const embeddings = await new HttpClient({
+        url: HuggingFaceIntegration.embeddingsUrl,
+      })
+        .addContentType(ContentType.applicationJson)
+        .addBearerAuth(HuggingFaceIntegration.apiToken)
+        .addBody(data)
+        .addMethod('POST')
+        .request<number[][]>();
+
+      logger.info('Embeddings generated successfully');
+
+      return embeddings;
+    } catch (error) {
+      const msg = 'while trying to generate Embeddings';
+      assertIsError(error);
+      logger.error(
+        `Something went wrong ${msg}. Error: ${error.message}. Content ${content[0]?.slice(0, 100)}...`
+      );
+      throw error;
+    }
   }
 }
