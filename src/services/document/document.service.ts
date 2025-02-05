@@ -1,4 +1,5 @@
-import Database from 'src/clients/db/client.integration';
+import Database from 'src/clients/db/database';
+import { TABLE_NAME } from 'src/clients/db/tables';
 import { assertIsError } from 'src/utils/error';
 import logger from 'src/utils/logger';
 
@@ -15,6 +16,15 @@ type CreateDocument = {
   }[];
 };
 
+type SectionMetadata = {
+  document: {
+    id: string;
+    title: string;
+  };
+  chapter: { id: string; title: string };
+  section: { content: string };
+};
+
 export class DocumentService {
   private Database: Database;
   private documentTableName: string;
@@ -24,9 +34,9 @@ export class DocumentService {
   constructor() {
     this.Database = Database.getInstance();
 
-    this.documentTableName = 'documents';
-    this.documentChapterTableName = 'document_chapters';
-    this.documentSectionTableName = 'document_sections';
+    this.documentTableName = TABLE_NAME.documents;
+    this.documentChapterTableName = TABLE_NAME.documentChapter;
+    this.documentSectionTableName = TABLE_NAME.documentSections;
   }
 
   public async getDocument(id: string): Promise<Document> {
@@ -50,6 +60,60 @@ export class DocumentService {
       const msg = `while trying to Fetch a Document with ID: ${id}`;
       assertIsError(error);
       logger.error(`Something went wrong ${msg}. Error:${error.message}`);
+      throw error;
+    }
+  }
+
+  public async getSectionMetadata(sectionId: string): Promise<SectionMetadata> {
+    const getSectionMetadataQuery = `SELECT 
+      d.id AS document_id,
+      d.title AS document_title, 
+      c.id AS chapter_id,
+      c.title AS chapter_title,
+      s.content AS section_content
+      FROM document_sections s
+      JOIN document_chapters c ON s.chapterId = c.id
+      JOIN documents d ON c.documentId = d.id
+      WHERE s.id = $1`;
+
+    logger.info(`Getting Metadata for Section with ID: ${sectionId}`);
+
+    try {
+      const getSectionMetadataResult = await this.Database.query<{
+        document_id: string;
+        document_title: string;
+        chapter_id: string;
+        chapter_title: string;
+        section_content: string;
+      }>(getSectionMetadataQuery, [sectionId]);
+
+      const { rowCount, rows } = getSectionMetadataResult;
+
+      if (rowCount !== 1) throw new Error();
+      const sectionMetadata = rows[0];
+
+      if (!sectionMetadata) throw new Error();
+      const {
+        document_id: documentId,
+        document_title: documentTitle,
+        chapter_id: chapterId,
+        chapter_title: chapterTitle,
+        section_content: sectionContent,
+      } = sectionMetadata;
+
+      logger.info(
+        `Section Metadata successfully retrieved. Document ID: ${documentId}, Chapter ID: ${chapterId}`
+      );
+
+      return {
+        document: { id: documentId, title: documentTitle },
+        chapter: { id: chapterId, title: chapterTitle },
+        section: { content: sectionContent },
+      };
+    } catch (error) {
+      const msg = `while trying to retrieve metadata for Section with ID: ${sectionId}`;
+      assertIsError(error, msg);
+      logger.error(`Something went wrong ${msg}. Error: ${error.message}`);
       throw error;
     }
   }

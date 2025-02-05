@@ -28,6 +28,7 @@ export class DocumentsRouter extends BaseRouter {
         const msg = `while trying to create a Document for the document: ${documentName}`;
         assertIsError(error);
         logger.error(`Something went wrong ${msg}. Error: ${error.message}`);
+        res.status(500).json(JSON.stringify({ error: 'Server Error' }));
       }
     });
   }

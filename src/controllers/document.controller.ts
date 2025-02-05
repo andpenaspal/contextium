@@ -1,5 +1,5 @@
 import { FileReader } from 'src/clients/file/fileReader';
-import { HuggingFaceIntegration } from 'src/clients/integrations/huggingface.integration';
+import type { GenAiIntegration } from 'src/clients/integrations/genAiIntegration.base';
 import { assertIsError } from 'src/utils/error';
 import logger from 'src/utils/logger';
 
@@ -17,9 +17,14 @@ type ExtractedDoc = {
 
 export class DocumentController {
   private documentService: DocumentService;
+  private genAiIntegration: GenAiIntegration;
 
-  constructor(documentService: DocumentService) {
+  constructor(
+    documentService: DocumentService,
+    genAiIntegration: GenAiIntegration
+  ) {
     this.documentService = documentService;
+    this.genAiIntegration = genAiIntegration;
   }
 
   public async createEmbeddedDocument(documentName: string) {
@@ -36,8 +41,6 @@ export class DocumentController {
         pathToDoc
       );
 
-      const api = new HuggingFaceIntegration();
-
       const { title: documentTitle, chapters } = jsonDocument;
       const filteredChapters = chapters.filter(
         (chapter) => chapter.title.length > 0
@@ -51,9 +54,11 @@ export class DocumentController {
             try {
               logger.info(`Creating embeddings for Chapter: ${chapter.title}`);
 
-              return await api.generateEmbeddings(chapter.sections);
+              return await this.genAiIntegration.generateEmbeddings(
+                chapter.sections
+              );
             } catch (error) {
-              const msg = `while trying to crate embeddings for Chapter ${chapter.title}`;
+              const msg = `while trying to create embeddings for Chapter ${chapter.title}`;
               assertIsError(error, msg);
               logger.error(`Something went wrong ${msg}`);
               throw error;

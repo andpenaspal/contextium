@@ -9,11 +9,7 @@ export class HttpStreamClient extends HttpBaseClient<ReadableStream<unknown>> {
     const contentType = res.headers.get('Content-Type');
     if (!contentType) throw new Error('No Content Type');
 
-    logger.info('HERE');
-    logger.info(res.body);
-    logger.info('HERE');
-
-    // console.dir(res, { depth: null });
+    logger.info('Processing Response');
 
     try {
       if (contentType === ContentType.textEventStream)

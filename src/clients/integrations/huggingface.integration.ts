@@ -1,5 +1,6 @@
 import { ContentType, HttpClient } from 'src/clients/http/httpClient';
 import { HttpStreamClient } from 'src/clients/http/httpStreamClient';
+import { GenAiIntegration } from 'src/clients/integrations/genAiIntegration.base';
 import { assertIsError } from 'src/utils/error';
 import logger from 'src/utils/logger';
 
@@ -18,16 +19,40 @@ export type StreamResponse = {
   usage: unknown;
 };
 
-export class HuggingFaceIntegration {
-  private static queryModel = 'google/gemma-2-2b-it';
-  private static queryUrl = `https://api-inference.huggingface.co/models/${HuggingFaceIntegration.queryModel}/v1/chat/completions`;
-  private static embeddingsUrl =
-    'https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/sentence-transformers/all-mpnet-base-v2';
-  private static apiToken = process.env.HUGGING_FACE_API_TOKEN;
+type QueryResponse = {
+  object: string;
+  id: string;
+  created: string;
+  model: string;
+  system_fingerprint: string;
+  choices: {
+    index: number;
+    message: { role: string; content: string };
+    log_probs: unknown;
+    finish_reason: string;
+  }[];
+  usage: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+};
+
+export class HuggingFaceIntegration extends GenAiIntegration {
+  constructor() {
+    const baseUrl = 'https://api-inference.huggingface.co';
+    const queryModel = 'google/gemma-2-2b-it';
+    const queryUrl = `/models/${queryModel}/v1/chat/completions`;
+    const embeddingsUrl =
+      '/pipeline/feature-extraction/sentence-transformers/all-mpnet-base-v2';
+    const apiToken = process.env.HUGGING_FACE_API_TOKEN;
+
+    super(baseUrl, queryModel, queryUrl, embeddingsUrl, apiToken);
+  }
 
   public async queryStream(query: string): Promise<ReadableStream<Uint8Array>> {
     const data = {
-      model: HuggingFaceIntegration.queryModel,
+      model: this.queryModel,
       messages: [
         {
           role: 'user',
@@ -39,10 +64,10 @@ export class HuggingFaceIntegration {
     };
 
     const stream = await new HttpStreamClient({
-      url: HuggingFaceIntegration.queryUrl,
+      url: this.queryUrl,
     })
       .addContentType(ContentType.applicationJson)
-      .addBearerAuth(HuggingFaceIntegration.apiToken)
+      .addBearerAuth(this.apiToken)
       .addBody(data)
       .addMethod('POST')
       .request<Uint8Array>();
@@ -133,6 +158,38 @@ export class HuggingFaceIntegration {
     return fullContent;
   }
 
+  public async query(query: string) {
+    try {
+      const data = {
+        model: this.queryModel,
+        messages: [
+          {
+            role: 'user',
+            content: query,
+          },
+        ],
+      };
+
+      logger.info(`Performing a Query to ${this.queryUrl}`);
+
+      const queryResponse = await new HttpClient({
+        url: this.queryUrl,
+      })
+        .addContentType(ContentType.applicationJson)
+        .addBearerAuth(this.apiToken)
+        .addBody(data)
+        .addMethod('POST')
+        .request<QueryResponse>();
+
+      return queryResponse.choices[0]?.message.content;
+    } catch (error) {
+      const msg = `while trying to Query HuggingFace`;
+      assertIsError(error, msg);
+      logger.error(`Something went wrong ${msg}. Error: ${error.message}`);
+      throw error;
+    }
+  }
+
   public async generateEmbeddings(content: string[]): Promise<number[][]> {
     logger.info(`Generating Embeddings`);
 
@@ -140,10 +197,10 @@ export class HuggingFaceIntegration {
 
     try {
       const embeddings = await new HttpClient({
-        url: HuggingFaceIntegration.embeddingsUrl,
+        url: this.embeddingsUrl,
       })
         .addContentType(ContentType.applicationJson)
-        .addBearerAuth(HuggingFaceIntegration.apiToken)
+        .addBearerAuth(this.apiToken)
         .addBody(data)
         .addMethod('POST')
         .request<number[][]>();

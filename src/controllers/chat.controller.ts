@@ -1,6 +1,6 @@
 import WebSocket from 'ws';
 
-import { HuggingFaceIntegration } from 'src/clients/integrations/huggingface.integration';
+import type { GenAiIntegration } from 'src/clients/integrations/genAiIntegration.base';
 import logger from 'src/utils/logger';
 
 type IncomingChatMessage = {
@@ -10,11 +10,11 @@ type IncomingChatMessage = {
 };
 
 export class ChatController {
-  //   private chatService: ChatService;
+  private genAiIntegration: GenAiIntegration;
 
-  //   constructor(chatService: ChatService){
-  //     this.chatService = chatService;
-  //   }
+  constructor(genAiIntegration: GenAiIntegration) {
+    this.genAiIntegration = genAiIntegration;
+  }
 
   public async processIncomingChatMessage(
     chatMessage: IncomingChatMessage,
@@ -22,9 +22,10 @@ export class ChatController {
   ) {
     // Save in DB;
     logger.info(`Processing Message: ${chatMessage.content}`);
-    const api = new HuggingFaceIntegration();
 
-    const streamer = await api.queryStream(chatMessage.content);
+    const streamer = await this.genAiIntegration.queryStream(
+      chatMessage.content
+    );
 
     websocket.send(' ');
     websocket.send(' ');
@@ -32,7 +33,9 @@ export class ChatController {
     websocket.send(' ');
     websocket.send(' ');
 
-    await api.processStream(streamer, (data) => websocket.send(data));
+    await this.genAiIntegration.processStream(streamer, (data) =>
+      websocket.send(data)
+    );
 
     websocket.send(' ');
     websocket.send(' ');

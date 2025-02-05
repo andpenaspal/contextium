@@ -4,6 +4,7 @@ import type { RequestListener } from 'http';
 
 import { ConfigModule } from 'src/modules/config.module';
 import { DocumentsModule } from 'src/modules/documents.module';
+import { SearchModule } from 'src/modules/search.module';
 import logger from 'src/utils/logger';
 
 import { MainRouter, type RouterConfig } from 'src/routes/main.router';
@@ -18,6 +19,7 @@ dotenv.config();
 const routers: RouterConfig[] = [
   { path: BASE_PATHS.config, router: new ConfigModule().getRouter() },
   { path: BASE_PATHS.documents, router: new DocumentsModule().getRouter() },
+  { path: BASE_PATHS.search, router: new SearchModule().getRouter() },
 ];
 
 const apiApp = express();

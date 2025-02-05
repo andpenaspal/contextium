@@ -9,3 +9,6 @@
 # Data
 /data/books/* 
 /data/extracted/*
+
+# Other
+debug.log

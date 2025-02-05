@@ -2,6 +2,7 @@ import { IncomingMessage } from 'http';
 import { Duplex } from 'stream';
 import WebSocket, { WebSocketServer } from 'ws';
 
+import { HuggingFaceIntegration } from 'src/clients/integrations/huggingface.integration';
 import logger from 'src/utils/logger';
 
 import { ChatController } from 'src/controllers/chat.controller';
@@ -53,7 +54,7 @@ export class ChatWebSocketServer {
 
       logger.info(`Message Received in WebSocket: ${decodedMessage}`);
 
-      const cc = new ChatController();
+      const cc = new ChatController(new HuggingFaceIntegration());
 
       try {
         await cc.processIncomingChatMessage(

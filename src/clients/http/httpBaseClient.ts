@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { assertIsError } from 'src/utils/error';
+import logger from 'src/utils/logger';
 
 export const ContentType = {
   applicationJson: 'application/json',
@@ -29,14 +30,45 @@ export abstract class HttpBaseClient<P extends RequestResponse> {
     url?: string,
     config?: RequestInit
   ): ConditionalRequestResponse<P, T> {
-    const apiUrl = url ?? this.url;
-    const apiConfig = config ?? this.config;
+    try {
+      const apiUrl = url ?? this.url;
+      const apiConfig = config ?? this.config;
 
-    if (!apiUrl) throw new Error('No Url for Fetch Call');
+      if (!apiUrl) throw new Error('No Url for Fetch Call');
 
-    const res = await fetch(apiUrl, apiConfig);
+      logger.info(`Performing API Call to: ${apiUrl}`);
 
-    return await this.processResponse<T>(res);
+      const res = await fetch(apiUrl, apiConfig);
+
+      if (!res.ok) {
+        const { status, statusText, headers } = res;
+        const body = await res.json();
+
+        logger.error(
+          `Unsuccessful Response ${status}: ${statusText}: ${JSON.stringify(body)}. ${JSON.stringify(headers)}`
+        );
+
+        throw new Error('Unsuccessful Response', {
+          cause: { status, statusText, body },
+        });
+      }
+
+      return await this.processResponse<T>(res);
+    } catch (error) {
+      assertIsError(error);
+      if (!(error.cause instanceof Response))
+        throw new Error(
+          `API Call failed with an Unknown Error: ${JSON.stringify(error)}`
+        );
+
+      logger.error(
+        `API Call failed with status: ${error.cause.status}. Error: ${JSON.stringify(error.cause.body)}`
+      );
+
+      throw new Error(`API Call failed with status: ${error.cause.status}`, {
+        cause: error.cause.status,
+      });
+    }
   }
 
   protected abstract processResponse<T>(
